@@ -1,0 +1,413 @@
+<!DOCTYPE HTML>
+<HTML lang="en">
+	<Head>
+	<Title>"Asteroid Navigation"</TITLE>
+		
+		<!-- 
+		GLSL is the language used for shaders (GL Shader Language)
+		
+		Attribute - you specify how to pull the data out of the buffers you supply.
+		Buffers - Data loaded onto the GPU (Normally vertex information)
+		
+		Uniforms - global variables (in GLSL) that you set before you run the shader program
+		
+		Textures - Textures are arrays of data you can randomly acces in your shader program.  
+		
+		Varying - are way for a vertex shader to pass data to the fragmentShader.
+		-->
+		<script id="2dVertexShader" type="notjs">
+		attribute vec4 a_position;	
+		//We now want to read in Colors
+		attribute vec3 vert_color;
+		//However, we want to send the color to
+		//The fragment Shader
+		varying vec3 fragColor;
+		
+		//Now we need a uniform.  A uniform is something consistent for all the vertices
+		//in a buffers
+		uniform vec3 transform;
+		uniform vec3 rotation;	
+		//I have added these and initialized them to 0,0,0 in 
+		//webgl_interface
+		uniform vec3 worldLoc;
+		uniform vec3 worldRotation;
+		
+	
+		uniform float n;
+		uniform float f;
+		uniform float r;
+		uniform float t;
+		
+		void main()
+		{
+			//This is a nice trick
+			vec3 c = cos(rotation);
+			vec3 s = sin(rotation);
+			fragColor = vert_color;
+			
+			
+			vec3 cw = cos(worldRotation);
+			vec3 sw = sin(worldRotation);
+			//We need to setup the view martix
+			
+			//We need to setup the projetion matrix
+			
+			//Surprise!  we have to go column firt when we enter the matrix.
+			mat4 translateModel = mat4(1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,1.0,0.0,transform.x,transform.y,transform.z,1);
+			mat4 rotateXModel = mat4(1.0,0.0,0.0,0.0,0.0,c.x,s.x,0.0,0.0,-1.0*s.x,c.x,0.0,0.0,0.0,0.0,1.0);
+			
+			
+			mat4 rotateYModel = mat4(c.y,0.0,-1.0*s.y,0.0,0.0,1.0,0.0,0.0,s.y,0.0,c.y,0.0,0.0,0.0,0.0,1.0);
+			
+			mat4 rotateZModel = mat4(c.z,s.z,0.0,0.0,-1.0*s.z,c.z,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,1.0);
+			
+			mat4 SimpleOrtho = mat4  (1,0.0,0.0,0.0,
+									 0.0,1,0.0,0.0, 
+									 0.0,0.0,1,0.0, 
+									 0.0,0.0,0.0,1.0);
+			
+
+			
+			
+			mat4 ComplexPerspective = mat4(
+										n/r, 0.0,0.0,0.0,
+										0.0, n/t,0.0,0.0,
+										0.0,0.0,-1.0*(f+n)/(f-n),-1.0,
+										0.0,0.0,-2.0*f*n/(f-n),0.0
+										);
+			mat4 ComplexOrtho = mat4(	1.0/r,0.0,0.0,0.0,
+										0.0,1.0/t,0.0,0.0,	//If I make the y -1.0/t I will invert the Y-axis.
+										0.0,0.0,1.0,0.0,
+										0.0,0.0,0.0,1.0	//If I make the x and y translate -1, -1 I can put 0,0 in the bottom right.
+									);
+			/*mat4 perspective = 		mat4(1.0/1.0,0,0,0, 
+										0,1.0/1.0,0,0, 
+										0,0,-1.0*(25.0+1.0)/(25.0-1.0),-1, 
+										0,0,-2.0*25.0*1.0/(25.0-1.0),0);
+			*/
+			mat4 translateView = mat4(1.0,0.0,0.0,0.0,
+									  0.0,1.0,0.0,0.0,
+									  0.0,0.0,1.0,0.0,
+									  -1.0*worldLoc.x,-1.0*worldLoc.y,worldLoc.z,1.0
+									);
+						
+			mat4 rotateView = mat4(cw.y,0.0,-1.0*sw.y,0.0,
+									0.0,1.0,0.0,0.0,
+									sw.y,0.0,cw.y,0.0,
+									0.0,0.0,0.0,1.0);
+			vec4 worldSpace = translateModel *rotateXModel*rotateYModel*rotateZModel*a_position;
+			vec4 viewSpace = rotateView*translateView*worldSpace;
+			//vec4 viewSpace = lookAt300*worldSpace;
+				mat4 SimplePerspective = 	mat4(
+								1.0,0.0,0.0,0.0,
+								0.0,1.0,0.0,0.0,
+								0.0,0.0,1.0,0.0,
+								0.0,0.0,0.0,-1.0*viewSpace.z			
+								);
+			gl_Position = ComplexPerspective*viewSpace;
+		}		
+		</SCRIPT>
+		<script id="2dFragmentShader" type="notjs">
+		//Fragment shaders do not have precision so we have to set it.
+		precision mediump float;
+		varying vec3 fragColor;
+		void main()
+		{
+			//gl_FragColor = vec4(0,0,1,1); //Between 0 and 1.
+			gl_FragColor = vec4(fragColor,1);
+		}
+		</script>
+		
+		<script src="webgl_interface.js"></script>
+		<script src="Objects.js"></script>
+
+		<script>
+		class main
+		{	
+			constructor()
+			{
+			this.Keys = [];
+			this.Visual = [];
+			this.Solid = [];
+			this.Trigger = [];
+			this.ObjectCounter = 0;
+			this.score = 0;
+			this.myWEBGL = new WebGL_Interface();
+			this.camLoc = [0,0,0];
+			this.camRot = [0,0,0];
+			
+			//this.myTriangle = [];
+			}
+			
+			//Could put business logic for the game here
+			//Including destroying objects
+			//Not always helpful though, try to keep most of it in each object's individual update function
+			
+			UpdateAll() {
+				for(var i in this.Visual) {
+					this.Visual[i].Update();
+					//could do movement
+				}
+				for(var i in this.Solid) {
+					this.Solid[i].Update();
+					//could do movement
+				}
+				for(var i in this.Trigger) {
+					this.Trigger[i].Update();
+					//could do movement
+				}
+			}
+			
+			RenderAll()
+			{
+				for(var i in this.Visual) {
+					this.Visual[i].Render(this.myWEBGL.program);
+				}
+				for(var i in this.Solid) {
+					this.Solid[i].Render(this.myWEBGL.program);
+				}
+				for(var i in this.Trigger) {
+					this.Trigger[i].Render(this.myWEBGL.program);
+				}
+			
+			}
+			CheckCollision(GO1, GO2, move)
+			{
+			
+				var Bound = GO1.collisionRadius + GO2.collisionRadius;
+				if(GO2.name == "Wall") {
+				//console.log(GO1.name+": :"+GO2.name+":  "+GO2.loc+"  -  "+Bound+" --  "+move);
+					if((GO2.loc[0] - Bound) < move[0] && move[0] < (GO2.loc[0] + Bound) && (GO2.loc[1] - Bound) < move[1] && move[1] < (GO2.loc[1] + Bound)) {
+						return true;
+					}
+				}
+				if(GO2.name != "Wall") {
+					if((Math.sqrt(Math.pow((move[0] - GO2.loc[0]), 2) + Math.pow((move[1] - GO2.loc[1]), 2) + Math.pow((move[2] - GO2.loc[2]), 2))) < Bound) {
+					return true;
+					}
+				}
+				else {
+					return false;
+				}
+				
+				
+				//Return true if they collide, false if they don't.
+			}
+
+			
+			CreateObject(type, prefab, loc, rot)
+			{
+				//type 0 = visual
+				//type 1 = solid
+				//type 2 = trigger
+				var temp = new prefab; //yes this dark sorcery will work
+				var id = ""+this.ObjectCounter;
+				this.ObjectCounter++;
+				temp.id = id;
+				temp.prefab = prefab;
+				temp.loc = loc;
+				//console.log(temp.loc);
+				//console.log(loc);
+				temp.rot = rot;
+					switch(type) {
+						case 0:
+							this.Visual[id] = temp;
+						break;
+						case 1:
+							this.Solid[id] = temp;
+						break;
+						case 2:
+							this.Trigger[id] = temp;
+						break;
+						default:
+						break;
+					}
+				//We can return the game object to the calling function
+				//Should the user want to set cutom names or properties on it
+				return temp;
+			}
+			DestroyObject(id)
+			{
+				if(id in this.Visual) {
+					delete this.Visual[id];
+				}
+				if(id in this.Solid) {
+					delete this.Solid[id];
+				}
+				if(id in this.Trigger) {
+					delete this.Trigger[id];
+				}
+			}
+			
+			/*
+			CollectCoin() {
+				this.score += 1;
+				document.getElementById("score").innerHTML = "Score: "+this.score;
+			}
+			*/
+			
+			GameOver() {
+				//document.getElementById("score").innerHTML = "<font size=20>"+"GAME OVER!"+"</font>";
+				var canv = document.getElementById('myCanvas');
+				canv.parentNode.removeChild(canv);
+			}
+			
+			KeyDown(event)
+			{
+			/*
+				var tempX = 0;
+				var tempY = 0;
+				var tempZ = 0;
+				console.log("Inside key press?")
+				switch(String.fromCharCode(event.keyCode))
+				{				
+					case "A":
+						m.camRot[1]-=.05;
+						break;
+					case "S":
+						m.camLoc[0]-= Math.sin(m.camRot[1])*.1;
+						m.camLoc[2]-= Math.cos(m.camRot[1])*.1;
+						
+						break;
+					case "D":
+						m.camRot[1]+=.05;
+						break;
+					case "W":
+						console.log(Math.cos(m.camRot[1])+","+Math.sin(m.camRot[1]));
+						m.camLoc[0]+= Math.sin(m.camRot[1])*.1;
+						m.camLoc[2]+= Math.cos(m.camRot[1])*.1;
+
+			
+						break;
+					case "Z":
+						m.camLoc[1]-=.05;
+						break;
+					case "X":
+						m.camLoc[1]+=.05;
+						break;
+						
+					case " ":
+					console.log(m.camLoc+"  -  "+m.camRot);
+						m.CreateObject(2,Bullet,[m.camLoc[0],m.camLoc[1],m.camLoc[2]],[m.camRot[0],m.camRot[1],m.camRot[2]]);
+				}
+	
+				var camLock  = gl.getUniformLocation(m.myWEBGL.program,'worldLoc');
+				gl.uniform3fv(camLock,new Float32Array(m.camLoc));
+				var camRotoation  = gl.getUniformLocation(m.myWEBGL.program,'worldRotation');
+				gl.uniform3fv(camRotoation,new Float32Array(m.camRot));
+				*/
+				this.Keys[String.fromCharCode(event.keyCode)] = true;
+			}
+			
+			KeyUp(event) {
+				this.Keys[String.fromCharCode(event.keyCode)] = false;
+			}
+			
+			MouseClick(event)
+			{
+				var rect = canvas.getBoundingClientRect();
+				var realX = event.clientX - rect.left;
+				var realY = event.clientY - rect.top;
+				console.log(realX+","+realY);
+				var x = -1 + 2*realX/myCanvas.width;
+				var y = -1 + 2*(myCanvas.height - realY)/myCanvas.height;
+				console.log("The click occurred on "+x+","+y);
+			}
+			
+			//Static call backs go down here
+			//   |
+			//  \ /
+			//   v
+			static keyD(event)
+			{
+				m.KeyDown(event);
+			}
+			
+			static keyU(event) {
+				m.KeyUp(event);
+			}
+			
+
+			static mouseH(event)
+			{
+				m.MouseClick(event);
+			}
+			
+			static MainLoop()
+			{
+				m.UpdateAll();
+				gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+				m.RenderAll();
+				requestAnimationFrame(main.MainLoop);
+			}
+
+		}
+		
+		function StartGame() {
+				//Create the Player
+				//m.CreateObject(2, Player, [-0.79,-0.7,0], [0.5,0,0]);
+				m.CreateObject(1, Camera, [0,0,0], [0,0,0]);
+
+				//m.CreateObject(1, Asteroid, [0,0,-5], [0,0,0]);
+				for(var ast=0; ast < 200; ast++) {
+					//console.log(Math.floor((Math.random() * 5)+1) *0.01);
+					//m.CreateObject(1, Asteroid, [ast,0,ast], [0,0,0]);
+					m.CreateObject(1, Asteroid, [Math.floor((Math.random() * 200)-100),Math.floor((Math.random() * 200)-100),Math.floor((Math.random() * 100)-50)], [0,0,0]);
+				}
+				
+				
+				
+				//Spawn Enemies
+				//m.CreateObject(1, Enemy2, [0.3,0.7,0], [0,0,1.57]);
+				
+				
+				//Vertical Walls
+				//m.CreateObject(1, MazeWall, [0.6,0.6,0], [0,0,1.58]);
+				
+				
+				var butt = document.getElementById('myButt');
+				butt.parentNode.removeChild(butt);
+			}
+		
+		
+		</script>
+		
+		
+
+	</Head>
+	<BODY style="padding: 15px;">
+		<HEADER>
+		
+		</HEADER>
+
+		<CANVAS id="myCanvas" width="640" height="400" style = "border: 1px solid #000;">
+			Your browser does not support canvas.
+		</CANVAS>
+		
+		<br>
+		<button id="myButt" onclick="StartGame()">Start Game</button>
+		
+
+		
+		<SCRIPT>
+			var canvas = document.getElementById("myCanvas");
+			var gl = canvas.getContext("webgl");
+			var m = new main();
+			window.onkeydown = main.keyD;
+			window.onkeyup = main.keyU;
+			canvas.addEventListener("click",main.mouseH);
+			
+			requestAnimationFrame(main.MainLoop);	
+			
+		</SCRIPT>
+		
+		<FOOTER>
+		
+		</FOOTER>
+
+		
+	</BODY>
+	
+</HTML>
+		
+		

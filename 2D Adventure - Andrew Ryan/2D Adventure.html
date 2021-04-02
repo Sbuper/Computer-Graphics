@@ -1,0 +1,312 @@
+<!DOCTYPE HTML>
+<HTML lang="en">
+	<HEAD>
+		<Title>"2D Adventure Game!"</TITLE>
+		
+		<!-- Extra javascript classes imported here -->
+		<script src="entity.js" ></script>
+		<script src="objects.js" ></script>
+
+		<Script>
+		//Main Class
+		class mainC
+		{
+			constructor()
+			{
+				//Creates the list that will be used to determine collision with objects
+				var list = [];
+				list[0] = 1;
+				this.posList = [];
+				for(var i = 0; i < 8; i++) {
+					this.posList[i] = [];
+					for(var j = 0; j < 8; j++) {
+					this.posList[i][j] = "N";
+					//console.log("position: "+i+"-"+j);
+					}
+				}
+				//Populates the list with objects within the play area
+				this.posList[1][0] = "B";
+				this.posList[6][0] = "B";
+				this.posList[7][0] = "B";
+				this.posList[2][1] = "B";
+				this.posList[2][2] = "B";
+				this.posList[3][2] = "B";
+				this.posList[4][2] = "B";
+				this.posList[4][4] = "B";
+				this.posList[1][5] = "B";
+				this.posList[4][5] = "B";
+				this.posList[5][5] = "B";
+				this.posList[1][6] = "B";
+				this.posList[2][6] = "B";
+				this.posList[6][6] = "B";
+				this.posList[7][7] = "B";
+				this.posList[6][7] = "P2";
+				this.posList[3][1] = "P1";
+				
+				//Creates all the used entities
+				this.drawBG();
+				this.p = new Player(50, 21, 5, "hero", 64, 64);
+				this.e1 = new Enemy(30, 15, 5, "slime", 128, 512);
+				this.e2 = new Enemy(70, 30, 0, "light", 384, 320);
+				this.e3 = new Enemy(60, 21, 5, "skelly", 192, 64);
+				
+				//Creates all the used objects
+				this.pot1 = new Potion(256, 128);
+				this.pot2 = new Potion(448, 512);
+				this.tree = new Tree();
+				this.brick = new Brick();
+				this.renderAll();
+			}
+			
+			
+			updateAll()
+			{
+				//These if conditions are meant to help remove dead creatures from the board, and help reduce wasted computation
+				//They're updating the state of the game, so to speak
+				if(this.p.health < 0) {
+					this.posList[(this.p.x/64)-1][(this.p.y/64)-1] = "N";
+					this.p.health = 0;
+				}
+
+				if(this.e1.health > 0){
+					this.moveLogic((Math.floor(Math.random() * 4) + 1), this.e1);
+				}
+				if(this.e1.health < 0) {
+					this.posList[(this.e1.x/64)-1][(this.e1.y/64)-1] = "N";
+					this.e1.health = 0;
+				}
+
+				
+				if(this.e2.health > 0){
+					this.moveLogic((Math.floor(Math.random() * 4) + 1), this.e2);
+				}
+				if(this.e2.health < 0) {
+					this.posList[(this.e2.x/64)-1][(this.e2.y/64)-1] = "N";
+					this.e2.health = 0;
+				}
+				
+				if(this.e3.health > 0){
+					this.moveLogic((Math.floor(Math.random() * 4) + 1), this.e3);
+				}
+				if(this.e3.health < 0) {
+					this.posList[(this.e3.x/64)-1][(this.e3.y/64)-1] = "N";
+					this.e3.health = 0;
+				}
+				
+			}
+			
+			//Renders all the objects and entities. Also checks for the win/loss condition, so that it can be overlayed without needing to kill the game.
+			renderAll()
+			{
+				this.drawBG();
+				this.tree.render();
+				this.brick.render();
+				this.p.render();
+				this.e1.render();
+				this.e2.render();
+				this.e3.render();
+				this.pot1.render();
+				this.pot2.render();
+				
+				if((this.e1.health + this.e2.health + this.e3.health) == 0) {
+					console.log("YOU WIN");
+					ctx.strokeStyle = "#F0F";
+					ctx.font = "60px Arial";
+					ctx.fillText("YOU WIN!!!", 128, 320);
+				}
+				
+				if(this.p.health == 0) {
+					console.log("YOU LOSE");
+					ctx.strokeStyle = "#F00";
+					ctx.font = "60px Arial";
+					ctx.fillText("Game Over...", 128, 320);
+				}
+			}
+			
+			//Creates the grassy background, nothing more
+			drawBG()
+			{
+				ctx.fillStyle = "green";
+				ctx.fillRect(0,0,640,640);
+				this.x = 0;
+				this.y = 0;
+			}
+			
+			//This is one of the two powerhouses of the game. 
+			//It controls all the logic needed to allow every entity in the game (both AI and player) the power to free-roam without breaking things.
+			moveLogic(dir, actr) {
+				if(actr.pic == "hero" && actr.health == 0) {
+						console.log("Dead hero's can't move!");
+						return;
+					}
+				//This determines which direction the entity moves
+				switch(dir) {
+					case 1:
+						//Left
+						var xMod = -64;
+						var yMod = 0;
+					break;
+					
+					case 2:
+						//Right
+						var xMod = +64;
+						var yMod = 0;
+					break;
+					
+					case 3:
+						//Up
+						var xMod = 0;
+						var yMod = -64;
+					break;
+					
+					case 4:
+						//Down
+						var xMod = -0;
+						var yMod = +64;
+					break;
+				}
+					//Determines if the move is legal, and then follows-up with the correct action if so
+					if(((actr.x+xMod)/64)-1 < 0 || ((actr.x+xMod)/64)-1 > 7 || ((actr.x+xMod)/64)-1 < 0 || ((actr.x+xMod)/64)-1 > 7) {
+						if(actr.pic == "hero") {
+							console.log("You'll fall off the map!");
+						}
+					}
+					else {
+					
+					//console.log(actr.pic+"is attempting to move to "+((actr.x/64)-1)+","+((actr.y/64)-1));
+					
+					var space = this.posList[((actr.x+xMod)/64)-1][((actr.y+yMod)/64)-1];
+					switch(space) {
+						case "N":
+							this.posList[(actr.x/64)-1][(actr.y/64)-1] = "N";
+							this.posList[((actr.x+xMod)/64)-1][((actr.y+yMod)/64)-1] = actr.pic;
+							actr.x += xMod;
+							actr.y += yMod;
+						break;
+						
+						case "P1":
+							if(actr.pic == "hero") {
+								actr.heal();
+								this.posList[((actr.x+xMod)/64)-1][((actr.y+yMod)/64)-1] = "N";
+								this.pot1.used = true;
+							}
+						break;
+						
+						case "P2":
+							if(actr.pic == "hero") {
+								actr.heal();
+								this.posList[((actr.x+xMod)/64)-1][((actr.y+yMod)/64)-1] = "N";
+								this.pot2.used = true;
+							}
+						break;
+						
+						case "B":
+							if(actr.pic == "hero") {
+							console.log("Cannot move, a brick is in the way!");
+							}
+						break;
+						}
+						
+						//The combat check isn't included the switch statement, because as an if-statement it can check every entity name in one line.
+						if(space == "hero" || space == "slime" || space == "light" || space == "skelly") {
+							myMain.combatLogic(actr, space);
+							if(actr.pic == "hero") {
+								console.log("Attacking "+space);
+							}
+						}
+					//Debugging stuff
+					//console.log("x="+((actr.x/64)-1)+"   y="+((actr.y/64)-1));
+					//console.log(space);
+					}
+			}
+			
+			//The second powerhouse of this game. Much more humble than the other, but is equally vital to it's operation. 
+			//Worth noting that some of the work is being done off in entity.js
+			combatLogic(atkr, defr) {
+				//Checks that both aren't monsters...We wouldn't want team killing!
+				if(atkr.pic == "hero" || defr == "hero") {
+					switch(defr) {
+						case "hero":
+							this.p.combat(atkr.attackBonus);
+						break;
+					
+						case "slime":
+							this.e1.combat(atkr.attackBonus);
+						break;
+					
+						case "light":
+							this.e2.combat(atkr.attackBonus);
+						break;
+					
+						case "skelly":
+							this.e3.combat(atkr.attackBonus);
+						break;
+					}
+				}
+			}
+		}
+		
+		//callback function for onkeydown
+		function Paint_Scene(e)
+			{
+			console.log("--------NEW MOVE-----");
+			//console.log(e);
+			switch(e.key) {
+				case "ArrowLeft":
+					myMain.moveLogic(1, myMain.p);
+				break;
+				
+				case "ArrowRight":
+					myMain.moveLogic(2, myMain.p);
+				break;
+				
+				case "ArrowUp":
+					myMain.moveLogic(3, myMain.p);
+				break;
+				
+				case "ArrowDown":
+					myMain.moveLogic(4, myMain.p);
+				break;
+			}
+			
+				//Draws grassy background
+				ctx.fillStyle = "green";
+				ctx.fillRect(0,0,640,640);
+				//Updates objects
+				myMain.updateAll();
+				//Re-renders scene
+				myMain.renderAll();
+			}
+		</SCRIPT>
+	</HEAD>
+	
+	<BODY>
+		<HEADER>
+		
+		</HEADER>
+		
+		<IMG src="Images/Hero.png" alt= "hero" id = "hero" visibility: hidden/>
+		<IMG src="Images/Foe1.png" alt= "slime" id = "slime" visibility: hidden/>
+		<IMG src="Images/Foe2.png" alt= "light" id = "light" visibility: hidden/>
+		<IMG src="Images/Foe3.png" alt= "skelly" id = "skelly" visibility: hidden/>
+		<IMG src="Images/Potion.png" alt= "pot" id = "potion" visibility: hidden/>
+		
+		<CANVAS id="myCanvas" width="640" height="640" tabindex='1' onkeydown="Paint_Scene(event)">
+			Your browser does not support canvas.
+		</CANVAS>
+
+		<FOOTER>
+		
+		</FOOTER>
+		<SCRIPT>
+			var canvas = document.getElementById("myCanvas");
+			var ctx = canvas.getContext("2d");	
+
+			myMain = new mainC();
+		</SCRIPT>
+		
+	</BODY>
+	
+</HTML>
+		
+		

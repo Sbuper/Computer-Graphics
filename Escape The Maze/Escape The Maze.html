@@ -1,0 +1,768 @@
+<!DOCTYPE HTML>
+<HTML lang="en">
+	<Head>
+	<Title>"Escape The Maze"</TITLE>
+		
+		<!-- 
+		GLSL is the language used for shaders (GL Shader Language)
+		
+		Attribute - you specify how to pull the data out of the buffers you supply.
+		Buffers - Data loaded onto the GPU (Normally vertex information)
+		
+		Uniforms - global variables (in GLSL) that you set before you run the shader program
+		
+		Textures - Textures are arrays of data you can randomly acces in your shader program.  
+		
+		Varying - are way for a vertex shader to pass data to the fragmentShader.
+		-->
+		<script id="2dVertexShader" type="notjs">
+		attribute vec4 a_position;	
+		
+		//WE need to add varying and attributes for the texture vertex.
+		attribute vec2 texcord;
+		varying vec2 v_texcord;
+		
+		
+		
+		//We now want to read in Colors
+		attribute vec3 vert_color;
+		//However, we want to send the color to
+		//The fragment Shader
+		varying vec3 fragColor;
+		
+		
+		
+		//Now we need a uniform.  A uniform is something consistent for all the vertices
+		//in a buffers
+		uniform vec3 transform;
+		uniform vec3 rotation;	
+		//I have added these and initialized them to 0,0,0 in 
+		//webgl_interface
+		uniform vec3 worldLoc;
+		uniform vec3 worldRotation;
+		
+		varying vec3 fakenormal;
+		varying vec3 v_surfaceToLight;
+		varying vec3 v_surfaceToLight2;
+		varying vec3 v_surfaceToLight3;
+		varying vec3 v_surfaceToLight4;
+		varying vec3 v_surfaceToLight5;
+		varying vec3 v_surfaceToLight6;
+		varying vec3 v_surfaceToLight7;
+		varying vec3 v_surfaceToLight8;
+		varying vec3 v_surfaceToLight9;
+		varying vec3 v_surfaceToLight10;
+		
+		varying vec3 v_surfaceToView;
+		varying vec3 v_spot_surfaceToLight;
+
+		
+	
+		uniform float n;
+		uniform float f;
+		uniform float r;
+		uniform float t;
+		
+		uniform float IsBillboard;
+		vec4 LookAt(vec3 forward, vec3 up, vec4 pos) {
+			forward = normalize(forward);
+			vec3 right = cross(forward,up);
+			mat4 LookAt = mat4 (
+			right.x, right.y, right.z, 0.0,
+			up.x, up.y, up.z, 0.0,
+			forward.x, forward.y, forward.z, 0.0,
+			0.0, 0.0, 0.0, 1.0
+			);
+			return LookAt * pos;
+		}
+		
+		void main()
+		{
+			//This is a nice trick
+			vec3 c = cos(rotation);
+			vec3 s = sin(rotation);
+			fragColor = vert_color;
+			v_texcord = texcord;
+			
+			
+			vec3 cw = cos(worldRotation);
+			vec3 sw = sin(worldRotation);
+			//We need to setup the view martix
+			
+			//We need to setup the projetion matrix
+			
+			//Surprise!  we have to go column firt when we enter the matrix.
+			mat4 translateModel = mat4(1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,1.0,0.0,transform.x,transform.y,transform.z,1);
+			mat4 rotateXModel = mat4(1.0,0.0,0.0,0.0,0.0,c.x,s.x,0.0,0.0,-1.0*s.x,c.x,0.0,0.0,0.0,0.0,1.0);
+			
+			
+			mat4 rotateYModel = mat4(c.y,0.0,-1.0*s.y,0.0,0.0,1.0,0.0,0.0,s.y,0.0,c.y,0.0,0.0,0.0,0.0,1.0);
+			
+			mat4 rotateZModel = mat4(c.z,s.z,0.0,0.0,-1.0*s.z,c.z,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,1.0);
+
+			mat4 ComplexPerspective = mat4(
+										n/r, 0.0,0.0,0.0,
+										0.0, n/t,0.0,0.0,
+										0.0,0.0,-1.0*(f+n)/(f-n),-1.0,
+										0.0,0.0,-2.0*f*n/(f-n),0.0
+										);
+										
+			mat4 translateView = mat4(1.0,0.0,0.0,0.0,
+									  0.0,1.0,0.0,0.0,
+									  0.0,0.0,1.0,0.0,
+									  -1.0*worldLoc.x,-1.0*worldLoc.y,worldLoc.z,1.0
+									);
+						
+			mat4 rotateView = mat4(cw.y,0.0,-1.0*sw.y,0.0,
+									0.0,1.0,0.0,0.0,
+									sw.y,0.0,cw.y,0.0,
+									0.0,0.0,0.0,1.0);
+									
+			vec4 worldSpace = translateModel *rotateXModel*rotateYModel*rotateZModel*a_position;
+			if(length(a_position)<2.0) {
+				fakenormal = normalize(vec3(rotateXModel*rotateYModel*rotateZModel*a_position));
+			}
+			else {
+				fakenormal = vec3(0.0,1.0,0.0);
+			}
+			
+			if(IsBillboard == 1.0) {					
+				vec3 f = transform-vec3(worldLoc.x,worldLoc.y,-1.0*worldLoc.z);
+				worldSpace = translateModel *  LookAt(f.xyz,vec3(0,1,0), a_position);
+				
+				fakenormal = LookAt(f.xyz,vec3(0,1,0), a_position).xyz;
+				
+			}
+			/*if(IsBillboard == 0.0) {
+				worldSpace = translateModel *rotateXModel*rotateYModel*rotateZModel*a_position;
+				if(length(a_position)<2.0) {
+					fakenormal = normalize(vec3(rotateXModel*rotateYModel*rotateZModel*a_position));
+				}
+				else {
+					fakenormal = vec3(0.0,1.0,0.0);
+				}
+			}*/
+			
+			
+			
+			v_surfaceToLight = vec3(11.0,0.5,11.0) - worldSpace.xyz;
+			v_surfaceToLight2 = vec3(11.0,0.5,-11.0) - worldSpace.xyz;
+			v_surfaceToLight3 = vec3(-11.0,0.5,11.0) - worldSpace.xyz;
+			v_surfaceToLight4 = vec3(-11.0,0.5,-11.0) - worldSpace.xyz;
+			v_surfaceToLight5 = vec3(0,0.5,0.0) - worldSpace.xyz;
+			v_surfaceToLight6 = vec3(11.0,0.5,0.0) - worldSpace.xyz;
+			v_surfaceToLight7 = vec3(-11.0,0.5,0.0) - worldSpace.xyz;
+			v_surfaceToLight8 = vec3(0.0,0.5,11.0) - worldSpace.xyz;
+			v_surfaceToLight9 = vec3(0.0,0.5,-11.0) - worldSpace.xyz;
+			v_surfaceToLight10 = vec3(6.5,0.5,0) - worldSpace.xyz;
+			v_surfaceToView = worldLoc - worldSpace.xyz;
+			
+			
+			vec4 viewSpace = rotateView*translateView*worldSpace;
+			gl_Position = ComplexPerspective*viewSpace;
+		}		
+		</SCRIPT>
+		<script id="2dFragmentShader" type="notjs">
+		//Fragment shaders do not have precision so we have to set it.
+		precision mediump float;
+		varying vec2 v_texcord;
+		uniform sampler2D sampler;
+		//WE need to declare our varying
+		//We need to create a sampler
+		varying vec3 fragColor;
+		varying vec3 fakenormal;
+		varying vec3 v_surfaceToLight;
+		varying vec3 v_surfaceToLight2;
+		varying vec3 v_surfaceToLight3;
+		varying vec3 v_surfaceToLight4;
+		varying vec3 v_surfaceToLight5;
+		varying vec3 v_surfaceToLight6;
+		varying vec3 v_surfaceToLight7;
+		varying vec3 v_surfaceToLight8;
+		varying vec3 v_surfaceToLight9;
+		varying vec3 v_surfaceToLight10;
+		
+		varying vec3 v_surfaceToView;
+		varying vec3 v_spot_surfaceToLight;
+		
+		void main()
+		{
+			float ambient = 0.1;
+
+			float d_light = dot(normalize(fakenormal),normalize(vec3(20.0,5.0,20.0)));
+			if(d_light < 0.0) {
+				d_light = 0.0;
+			}
+			//gl_FragColor = vec4(fragColor*(d_light+ambient),1);
+			
+			
+			//gl_FragColor = vec4(fragColor*(d_light+ambient),1);
+			
+			
+			
+			float p_light = dot(normalize(fakenormal),normalize(v_surfaceToLight)*2.0/length(v_surfaceToLight));
+			if(p_light < 0.0) {
+				p_light = 0.0;
+			}
+			
+			
+			
+			float p_light2 = dot(normalize(fakenormal),normalize(v_surfaceToLight2)*2.0/length(v_surfaceToLight2));
+			if(p_light2 < 0.0) {
+				p_light2 = 0.0;
+			}
+			
+			float p_light3 = dot(normalize(fakenormal),normalize(v_surfaceToLight3)*2.0/length(v_surfaceToLight3));
+			if(p_light3 < 0.0) {
+				p_light3 = 0.0;
+			}
+			
+			float p_light4 = dot(normalize(fakenormal),normalize(v_surfaceToLight4)*2.0/length(v_surfaceToLight4));
+			if(p_light4 < 0.0) {
+				p_light4 = 0.0;
+			}
+			
+			float p_light5 = dot(normalize(fakenormal),normalize(v_surfaceToLight5)*2.0/length(v_surfaceToLight5));
+			if(p_light5 < 0.0) {
+				p_light5 = 0.0;
+			}
+			
+			float p_light6 = dot(normalize(fakenormal),normalize(v_surfaceToLight6)*2.0/length(v_surfaceToLight6));
+			if(p_light < 0.0) {
+				p_light = 0.0;
+			}
+			
+			
+			
+			float p_light7 = dot(normalize(fakenormal),normalize(v_surfaceToLight7)*2.0/length(v_surfaceToLight7));
+			if(p_light2 < 0.0) {
+				p_light2 = 0.0;
+			}
+			
+			float p_light8 = dot(normalize(fakenormal),normalize(v_surfaceToLight8)*2.0/length(v_surfaceToLight8));
+			if(p_light3 < 0.0) {
+				p_light3 = 0.0;
+			}
+			
+			float p_light9 = dot(normalize(fakenormal),normalize(v_surfaceToLight9)*2.0/length(v_surfaceToLight9));
+			if(p_light4 < 0.0) {
+				p_light4 = 0.0;
+			}
+			
+			float p_light10 = dot(normalize(fakenormal),normalize(v_surfaceToLight10)*2.0/length(v_surfaceToLight10));
+			if(p_light5 < 0.0) {
+				p_light5 = 0.0;
+			}
+			
+			
+			
+			//gl_FragColor = vec4(fragColor*(ambient+d_light+p_light),1);
+			
+			float spot_light_power = 0.0;
+			float spot_light = dot(normalize(v_spot_surfaceToLight),vec3(0,2.2,0));
+			if(spot_light >= 0.98) {
+				spot_light_power = dot(normalize(fakenormal),normalize(v_spot_surfaceToLight));
+				if(spot_light_power < 0.0) {
+					spot_light_power = 0.0;
+				}
+			}
+			//gl_FragColor = vec4(fragColor*(ambient+p_light+p_light2+p_light3+p_light4+p_light5+p_light6+p_light7+p_light8+p_light9+p_light10+(d_light*0.25)),1);
+			gl_FragColor = texture2D(sampler,v_texcord);//*(ambient+p_light+p_light2+p_light3+p_light4+p_light5+p_light6+p_light7+p_light8+p_light9+p_light10+(d_light*0.25));
+			
+		}
+		</script>
+		
+		<script src="webgl_interface.js"></script>
+		<script src="Objects.js"></script>
+
+		<script>
+		class main
+		{	
+			constructor()
+			{
+			this.Keys = [];
+			this.Visual = [];
+			this.Solid = [];
+			this.Trigger = [];
+			this.ObjectCounter = 0;
+			this.myWEBGL = new WebGL_Interface();
+			this.camLoc = [0,0,0];
+			this.camRot = [0,0,0];
+			this.reapLoc = [0,0,-2];
+			this.Maze = [];
+			//Wa = "Wall type 1"
+			//Wb = "Wall type 2"
+			//O = "Open"
+			for(var i = 0; i < 30; i++) {
+				var collumn = [];
+				for(var j = 0; j < 30; j++) {
+					collumn[j] = 'O';
+				}
+				this.Maze[i] = collumn;
+			}
+			
+			//this.myTriangle = [];
+			}
+			
+			//Could put business logic for the game here
+			//Including destroying objects
+			//Not always helpful though, try to keep most of it in each object's individual update function
+			
+			UpdateAll() {
+				for(var i in this.Visual) {
+					this.Visual[i].Update();
+					//could do movement
+				}
+				for(var i in this.Solid) {
+					this.Solid[i].Update();
+					//could do movement
+				}
+				for(var i in this.Trigger) {
+					this.Trigger[i].Update();
+					//could do movement
+				}
+			}
+			
+			RenderAll()
+			{
+				for(var i in this.Visual) {
+					this.Visual[i].Render(this.myWEBGL.program);
+				}
+				for(var i in this.Solid) {
+					this.Solid[i].Render(this.myWEBGL.program);
+				}
+				for(var i in this.Trigger) {
+					this.Trigger[i].Render(this.myWEBGL.program);
+				}
+			
+			}
+			CheckCollision(GO1, GO2, move)
+			{
+			
+				var Bound = GO1.collisionRadius + GO2.collisionRadius;
+				if(GO2.name == "WallOne" || GO2.name == "WallTwo" || GO2.name == "Exit") {
+					if((GO2.loc[0] - Bound) < move[0] && move[0] < (GO2.loc[0] + Bound) && (GO2.loc[2] - Bound) < move[2] && move[2] < (GO2.loc[2] + Bound)) {
+					//Vertical Collison (Not needed):
+					// && (GO2.loc[1] - Bound) < move[1] && move[1] < (GO2.loc[1] + Bound) 
+						return true;
+						console.log(collide);
+					}
+				}
+				if(GO2.name != "Tree" && GO2.name != "Rock") {
+					if((Math.sqrt(Math.pow((move[0] - GO2.loc[0]), 2) + Math.pow((move[1] - GO2.loc[1]), 2) + Math.pow((move[2] - GO2.loc[2]), 2))) < Bound) {
+					return true;
+					console.log(collide);
+					}
+				}
+				else {
+					return false;
+				}
+				
+				
+				
+				//Return true if they collide, false if they don't.
+			}
+
+			
+			CreateObject(type, prefab, loc, rot)
+			{
+				//type 0 = visual
+				//type 1 = solid
+				//type 2 = trigger
+				var temp = new prefab; //yes this dark sorcery will work
+				var id = ""+this.ObjectCounter;
+				this.ObjectCounter++;
+				temp.id = id;
+				temp.prefab = prefab;
+				temp.loc = loc;
+				//console.log(temp.loc);
+				//console.log(loc);
+				temp.rot = rot;
+					switch(type) {
+						case 0:
+							this.Visual[id] = temp;
+						break;
+						case 1:
+							this.Solid[id] = temp;
+						break;
+						case 2:
+							this.Trigger[id] = temp;
+						break;
+						default:
+						break;
+					}
+				//We can return the game object to the calling function
+				//Should the user want to set cutom names or properties on it
+				return temp;
+			}
+			DestroyObject(id)
+			{
+				if(id in this.Visual) {
+					delete this.Visual[id];
+				}
+				if(id in this.Solid) {
+					delete this.Solid[id];
+				}
+				if(id in this.Trigger) {
+					delete this.Trigger[id];
+				}
+			}
+	
+			KeyDown(event)
+			{
+				this.Keys[String.fromCharCode(event.keyCode)] = true;
+			}
+			
+			KeyUp(event) {
+				this.Keys[String.fromCharCode(event.keyCode)] = false;
+			}
+			
+			MouseClick(event)
+			{
+				var rect = canvas.getBoundingClientRect();
+				var realX = event.clientX - rect.left;
+				var realY = event.clientY - rect.top;
+				console.log(realX+","+realY);
+				var x = -1 + 2*realX/myCanvas.width;
+				var y = -1 + 2*(myCanvas.height - realY)/myCanvas.height;
+				console.log("The click occurred on "+x+","+y);
+			}
+			
+			//Static call backs go down here
+			//   |
+			//  \ /
+			//   v
+			static keyD(event)
+			{
+				m.KeyDown(event);
+			}
+			
+			static keyU(event) {
+				m.KeyUp(event);
+			}
+			
+
+			static mouseH(event)
+			{
+				m.MouseClick(event);
+			}
+			
+			static MainLoop()
+			{
+				m.UpdateAll();
+				gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+				m.RenderAll();
+				requestAnimationFrame(main.MainLoop);
+			}
+
+		}
+		
+		function createFloor() {
+			//Actually get our texture;
+			var myPic = [];
+			for(i =0; i < 16; i ++) {
+				for(j =0; j< 16; j ++) {
+					if(i%2 != 0 || i == j || 64-j ==i || i/2 == j || j/2 == i) {
+						//Push grey
+						myPic.push(100,150,100,255);
+					}
+					else {
+						//push black
+						myPic.push(100,100,100,255);
+					}	
+				}	
+			}
+			return myPic;
+		}
+		
+		function createWallOne() {
+			//Actually get our texture;
+			var myPic1 = [];
+			for(i =0; i < 16; i ++) {
+				for(j =0; j< 16; j ++) {
+					if(i%2 != 0) {
+						//Push grey
+						myPic1.push(200,200,200,255);
+					}
+					else {
+						//push black
+						myPic1.push(100,100,100,255);
+					}	
+				}
+			}
+			return myPic1;
+		}
+		
+		function createWallTwo() {
+			//Actually get our texture;
+			var myPic2 = [];
+			for(i =0; i < 16; i ++)
+				{
+					for(j =0; j< 16; j ++)
+					{
+						if(i%4 == j%4)
+						{
+							//Push red
+							myPic2.push(200,200,200,255);
+						}
+						else
+						{
+							myPic2.push(100,100,100,255);
+						}	
+					}
+				}
+			return myPic2;
+		}
+		
+		function createReaper() {
+			//Actually get our texture;
+			var myPic3 = [];
+			for(i =0; i < 16; i ++) {
+				for(j =0; j< 16; j ++) {
+						//Push Red
+						myPic3.push(255,0,0,255);
+				}
+			}
+			return myPic3;
+		}
+		
+		function createSkelly() {
+			//Actually get our texture;
+			var myPic4 = [];
+			for(i =0; i < 16; i ++) {
+				for(j =0; j< 16; j ++) {
+						//Push Green
+						myPic4.push(0,255,0,255);
+				}
+			}
+			return myPic4;
+		}
+		
+		function createSlime() {
+			//Actually get our texture;
+			var myPic5 = [];
+			for(i =0; i < 16; i ++) {
+				for(j =0; j< 16; j ++) {
+						//Push Blue
+						myPic5.push(0,0,255,255);
+				}
+			}
+			return myPic5;
+		}
+		
+		function createGreen() {
+			//Actually get our texture;
+			var myPic6 = [];
+			for(i =0; i < 16; i ++) {
+				for(j =0; j< 16; j ++) {
+						myPic6.push(0,160,0,255);
+					}	
+			}
+			return myPic6;
+		}
+		
+		function SpawnWalls() {
+			var count = 0;
+			for(var i = -12; i < 12.8; i+=0.8) {
+				m.CreateObject(1, WallOne, [i,-0.2,-12], [0,0,0]);
+				m.CreateObject(1, WallOne, [i,-0.2,12], [0,0,0]);
+				m.Maze[0][count] = "W";
+				m.Maze[29][count] = "W";
+				count++;
+			}
+			count = 0
+			for(var j = -11.2; j < 12; j+=0.8) {
+				if( j != 9.600000000000003) {
+					m.CreateObject(1, WallOne, [-12,-0.2,j], [0,0,0]);
+				}
+				m.CreateObject(1, WallOne, [12,-0.2,j], [0,0,0]);
+				m.Maze[count][0] = "W";
+				m.Maze[count][29] = "W";
+				count++;
+			}
+			
+			
+			//Horizontal Walls
+			for(var a = -11.2; a < 4.0; a+=0.8) {
+				if(a != -2.3999999999999986 
+					&&  a != -1.5999999999999985
+					&& a != 0.7999999999999985) {
+					m.CreateObject(1, WallTwo, [a,-0.2,-9.6], [0,0,0]);
+				}
+
+			}
+
+			for(var c = -8.8; c < -5.6; c+=0.8) {
+				m.CreateObject(1, WallTwo, [c,-0.2,-6.4], [0,0,0]);
+				m.CreateObject(1, WallTwo, [c,-0.2,0.8], [0,0,0]);
+				m.CreateObject(1, WallTwo, [c,-0.2,6.4], [0,0,0]);
+			}
+			
+			for(var d = -11.2; d < -8; d+=0.8) {
+				m.CreateObject(1, WallTwo, [d,-0.2,-2.4], [0,0,0]);
+				m.CreateObject(1, WallTwo, [d,-0.2,4.0], [0,0,0]);
+				m.CreateObject(1, WallTwo, [d,-0.2,8.8], [0,0,0]);
+			}
+			
+			for(var e = -1.6; e < 12; e+=0.8) {
+				if(e != 4.8 && e != 5.6) {
+					m.CreateObject(1, WallTwo, [e,-0.2,4.8], [0,0,0]);
+				}
+			}
+			
+			for(var b = 0.8; b < 12; b+=0.8) {
+				if(b != 7.199999999999999
+				&& b != 7.999999999999999) {
+					m.CreateObject(1, WallTwo, [b,-0.2,9.6], [0,0,0]);
+				}
+			}
+			
+			
+			//Vertical Walls
+			
+			for(var f = -6.4; f < 12; f+=0.8) {
+				m.CreateObject(1, WallTwo, [-4.8,-0.2,f], [0,0,0]);
+			}
+			
+			for(var g = 5.6; g < 10.4; g+=0.8) {
+				m.CreateObject(1, WallTwo, [0.8,-0.2,g], [0,0,0]);
+				m.CreateObject(1, WallTwo, [1.6,-0.2,g], [0,0,0]);
+				m.CreateObject(1, WallTwo, [2.4,-0.2,g], [0,0,0]);
+			}
+			
+			for(var h = -9.6; h < -4.0; h+=0.8) {
+				m.CreateObject(1, WallTwo, [3.2,-0.2,h], [0,0,0]);
+			}
+			
+			for(var k = -1.6; k < 4.8; k+=0.8) {
+				m.CreateObject(1, WallTwo, [4.0,-0.2,k], [0,0,0]);
+			}
+			
+			for(var l = -5.6; l < -1.6; l+=0.8) {
+				m.CreateObject(1, WallTwo, [8.0,-0.2,l], [0,0,0]);
+			}
+			
+			for(var n = -11.2; n < -8.0; n+=0.8) {
+				m.CreateObject(1, WallTwo, [8.8,-0.2,n], [0,0,0]);
+			}
+			/*
+			-11.2
+			-10.399999999999999
+			-9.599999999999998
+			-8.799999999999997
+			-7.999999999999997
+			-7.1999999999999975
+			-6.399999999999998
+			-5.599999999999998
+			-4.799999999999998
+			-3.9999999999999982
+			-3.1999999999999984
+			-2.3999999999999986
+			-1.5999999999999985
+			-0.7999999999999985
+			1.5543122344752192e-15
+			0.8000000000000016
+			1.6000000000000016
+			2.4000000000000017
+			3.200000000000002
+			4.000000000000002
+			4.800000000000002
+			5.600000000000001
+			6.400000000000001
+			7.200000000000001
+			8.000000000000002
+			8.800000000000002
+			9.600000000000003
+			10.400000000000004
+			11.200000000000005
+			*/
+		}
+		
+		function ResetGame() {
+			for(var obj in m.Solid) {
+				//console.log(m.Solid[obj].id);
+				m.DestroyObject(m.Solid[obj].id);
+				//console.log("Success!");
+			}
+			for(var vis in m.Visual) {
+				m.DestroyObject(m.Visual[vis].id);
+			}
+			for(var trig in m.Trigger) {
+				m.DestroyObject(m.Trigger[trig].id);
+			}
+			
+			m.camLoc = [0,0,0];
+			m.camRot = [0,0,0];
+			m.reapLoc = [0,0,-2];
+			this.ObjectCounter = 0;
+			StartGame();
+		}
+		
+		function WinGame() {
+			document.getElementById("end").innerHTML = "<font size=20>"+"YOU WIN!"+"</font>";
+			var canv = document.getElementById('myCanvas');
+			canv.parentNode.removeChild(canv);
+			
+		}
+		
+		function StartGame() {
+				//Create the Player
+				m.CreateObject(1, Camera, [0,0,0], [0,0,0]);
+				m.CreateObject(1, Floor, [0,-0.25,0], [0,0,0]);
+				m.CreateObject(1, Exit, [-13,-1.1,9.600000000000003], [0,0,0]);
+				m.CreateObject(1, Reaper, [-6.4,-0.2,-2], [0,0,0]);
+				m.CreateObject(1, Skelly, [6.4,-0.2,7], [0,0,0]);
+				m.CreateObject(1, Slime, [-10.8,-0.2,-11], [0,0,0]);
+				
+				SpawnWalls();
+				
+				var butt = document.getElementById('myButt');
+				if(butt != null) {
+					butt.parentNode.removeChild(butt);
+				}
+			}
+		
+		
+		</script>
+		
+		
+
+	</Head>
+	<BODY style="padding: 15px;">
+		<HEADER>
+		
+		</HEADER>
+
+		<CANVAS id="myCanvas" width="640" height="400" style = "border: 1px solid #000;">
+			Your browser does not support canvas.
+		</CANVAS>
+		
+		<br>
+		<SECTION id="end">
+		</SECTION>
+		<button id="myButt" onclick="StartGame()">Start Game</button>
+		
+
+		
+		<SCRIPT>
+			var canvas = document.getElementById("myCanvas");
+			var gl = canvas.getContext("webgl");
+			var m = new main();
+			window.onkeydown = main.keyD;
+			window.onkeyup = main.keyU;
+			canvas.addEventListener("click",main.mouseH);
+			
+			requestAnimationFrame(main.MainLoop);	
+			
+		</SCRIPT>
+		
+		<FOOTER>
+		
+		</FOOTER>
+
+		
+	</BODY>
+	
+</HTML>
+		
+		

@@ -1,0 +1,106 @@
+<!-- This HTML file is written for academic purposes -->
+
+
+<HTML>
+	<HEAD>
+		<META CHARSET="UTF-8">
+		<TITLE> Andrew's Lucky Number Game </TITLE>
+		<SCRIPT>
+			class main
+			{
+				constructor()
+				{
+				//Variables tracking the values needed between cycles
+				this.win = 0
+				this.lose = 0
+				}
+				
+				playGame()
+				{
+				
+				//Variables controlling the numbers needed for the game
+				var num1 = Math.floor((Math.random() * 100) + 1);
+				console.log(num1);
+				var num2 = Math.floor((Math.random() * 100) + 1);
+				console.log(num2);
+				var result = num2-num1
+				console.log(result);
+				
+				//Variables for easier changing of html content + display of numbers
+				var img = document.getElementById("face");
+				var update = "<p style='color: #000;'>"+"First number: "+num1+"<br>"+"Second number: "+num2+"<br>"+"<br>"+"</p>";
+				
+				//Primary logic for the game, deciding if a won or loss occured and updatig values accordingly
+				switch(true) {
+					case result<0:
+						this.lose += 1;
+						update += "<p style='color: #000;'><strong>"+"You Lose!"+"<br>"+"</strong></p>";
+						console.log("lose");
+						img.src = "lose.bmp";
+					break;
+					
+					case result>0:
+						this.win += 1;
+						update += "<p style='color: #000;'><strong>"+"You Win!"+"</strong></p>";
+						console.log("win");
+					break;
+					
+					case result==0:
+						update += "<p style='color: #000;'><strong>"+"Wow, a Tie!"+"<br>"+"</strong></p>";
+						console.log("tie");
+						img.src = "tie.bmp";
+					break;
+				}
+				
+				//Determines whether the image needs to be updated to reflect the current win/loss ratio
+				switch(true) {
+					case this.win>this.lose:
+						img.src = "win.bmp";
+					break;			
+					case this.win<this.lose:
+					
+						img.src = "lose.bmp";
+					break;				
+					case this.win==this.lose:
+					
+						img.src = "tie.bmp";
+					break;
+				}
+				
+				//Updates the html page with all necessary changes 
+				document.getElementById("score").innerHTML = "<p style='color: #000;'>"+"Wins: "+this.win+"<br>"+"Losses "+this.lose+"</p>";
+				document.getElementById("winloss").innerHTML = update;
+				}
+			}
+			
+			//Calls back to the main function
+			function callback()
+			{	
+				myMain.playGame()
+			}
+		</SCRIPT>
+	</HEAD>
+	
+	<BODY>
+		<HEADER><H1>Andrew's Lucky Number Game! </H1></HEADER>
+		<SECTION id="score">
+		Wins:  0 
+		<br> 
+		Losses:  0 
+		<br>
+		<br>
+		</SECTION>
+		<img src="tie.bmp" alt="Is this how you feel?..." id = "face">
+		<SECTION id = "winloss">
+		<br> <br> 
+		Welcome! 
+		<br> <br> <br> <br> <br>
+		</SECTION>
+		<br> <br> <br>
+		<input type="button" value="Click to Play!" id="MyButton" onclick="callback()">
+		<SCRIPT>
+		//Calls back to the main function
+		myMain = new main();
+		</SCRIPT>
+	</BODY>
+</HTML>

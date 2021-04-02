@@ -1,0 +1,134 @@
+<!-- This HTML file is written for academic purposes -->
+
+
+<HTML>
+	<HEAD>
+		<META CHARSET="UTF-8">
+		<TITLE> Slot Machine Game! </TITLE>
+		<SCRIPT>
+			class main {
+			
+			constructor() {
+				this.money = 100;
+				this.machines = [];
+				this.newSect = document.createElement("section");
+				this.newSect.id = "newSect";
+				document.body.insertBefore(this.newSect, myButton);
+				this.machines[0] = new slotMachine();
+				this.machines[1] = new slotMachine();
+				this.machines[2] = new slotMachine();
+				
+				this.eleText = document.createElement("h1");
+				this.eleText.id = "msg";
+				document.getElementById("newSect").appendChild(this.eleText);
+				
+			}
+			
+			playAll() {
+				var winnings = 0;
+				this.money -= 1;
+				if(this.money < 0) {
+				//Closes function and prints "No Money!"
+				document.getElementById("msg").innerHTML = ("<p>" + "<br>" + "Not enough money!" + "</p>");
+				return 0;
+				}
+				
+				for(var x = 0; x < this.machines.length; x++) {
+				this.machines[x].play();
+				winnings += this.machines[x].lastWin;
+				}
+				if(winnings > 0) {
+				document.getElementById("msg").innerHTML = ("<p>" + "<br>" + "Winner! You earned " + winnings + "!" + "</p>");
+				//Displays $ won and "winner!"
+				}
+				else {
+				//Displays "Game over"
+				
+				//console.log(winnings);
+				//console.log(this.money);
+				
+				document.getElementById("msg").innerHTML = ("<p>" + "<br>" + "Game Over!" + "</p>");
+				}
+				this.money += winnings;
+			}
+			}
+			
+			class slotMachine {
+			
+			constructor() {
+				this.lastWin = 0;
+				this.list = [];
+				this.imgList = [];
+				//Dynamically adds 3 HTML images to the document while storing them in imgList
+				//Images are 64x64
+				this.imgList[0] = document.createElement("IMG");
+				this.imgList[0].setAttribute("src", "0.bmp");
+				document.getElementById("newSect").appendChild(this.imgList[0]);
+				this.imgList[1] = document.createElement("IMG");
+				this.imgList[1].setAttribute("src", "1.bmp");
+				document.getElementById("newSect").appendChild(this.imgList[1]);
+				this.imgList[2] = document.createElement("IMG");
+				this.imgList[2].setAttribute("src", "2.bmp");
+				document.getElementById("newSect").appendChild(this.imgList[2]);
+				}
+				
+			play() {
+				for(var i = 0; i < 3; i++) {
+					//Adds random numbers to list
+					this.list[i] = Math.floor((Math.random() * 7) + 1);
+					
+					//console.log(Math.floor((Math.random() * 7) + 1));
+					//console.log(this.list[i]);
+					
+					//Changes slot machine images to match the numbers
+					this.imgList[i].src = (this.list[i] + ".bmp");
+				}
+				switch(true) {
+					case (this.list[0]+this.list[1]+this.list[2]) == 0:
+						this.lastWin = 14;
+					break;	
+					
+					case this.list[0] == this.list[1] && this.list[1] == this.list[2]:
+						this.lastWin = 7;
+					break;
+					
+					case this.list[0] == this.list[1] && this.list[2] != 0:
+						this.lastWin = 3;
+					break;
+					
+					case this.list[0] == this.list[1]:
+						this.lastWin = 2;
+					break;
+					
+					case this.list[0] == 0:
+						this.lastWin = 1;
+					break;
+					
+					default:
+						this.lastWin = 0;
+						//console.log("Numbers:"+this.list[0]+this.list[1]+this.list[2]);
+					break;
+				}
+			}
+			
+			}
+			
+			function callback()
+			{	
+				myMain.playAll();
+				
+			}
+				
+		</SCRIPT>
+	</HEAD>
+	
+	<BODY>
+		<HEADER><H1> Slot Machine </H1></HEADER>
+		<br>
+		<input type="button" value="play" id="myButton" onclick="callback()">
+		<SCRIPT>
+		//Calls back to the main function
+		myMain = new main();
+		</SCRIPT>
+	</BODY>
+</HTML>
